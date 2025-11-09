@@ -12,6 +12,10 @@ interface Question {
   variants: Variant[];
 }
 
+interface ShuffledQuestion extends Question {
+  shuffledVariants: Variant[];
+}
+
 function App() {
   const [questions] = useState<Question[]>(questionsData as Question[])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -20,7 +24,7 @@ function App() {
   const [score, setScore] = useState(0)
   const [answeredQuestions, setAnsweredQuestions] = useState(0)
   const [quizStarted, setQuizStarted] = useState(false)
-  const [randomQuestions, setRandomQuestions] = useState<Question[]>([])
+  const [randomQuestions, setRandomQuestions] = useState<ShuffledQuestion[]>([])
   const [questionCount, setQuestionCount] = useState<number>(10)
   const [showSettings, setShowSettings] = useState(false)
 
@@ -36,7 +40,14 @@ function App() {
   const startQuiz = (count: number) => {
     const shuffled = shuffleArray(questions)
     const selected = count === questions.length ? shuffled : shuffled.slice(0, count)
-    setRandomQuestions(selected)
+    
+    // Shuffle variants for each question
+    const questionsWithShuffledVariants: ShuffledQuestion[] = selected.map(q => ({
+      ...q,
+      shuffledVariants: shuffleArray(q.variants)
+    }))
+    
+    setRandomQuestions(questionsWithShuffledVariants)
     setQuizStarted(true)
     setShowSettings(false)
     setCurrentQuestionIndex(0)
@@ -52,7 +63,7 @@ function App() {
     if (selectedAnswer !== null) return
     setSelectedAnswer(index)
     
-    if (currentQuestion.variants[index].isCorrect) {
+    if (currentQuestion.shuffledVariants[index].isCorrect) {
       setScore(score + 1)
     }
     setAnsweredQuestions(answeredQuestions + 1)
@@ -70,11 +81,11 @@ function App() {
   const getButtonClass = (index: number) => {
     if (selectedAnswer === null) return 'variant-btn'
     
-    if (currentQuestion.variants[index].isCorrect) {
+    if (currentQuestion.shuffledVariants[index].isCorrect) {
       return 'variant-btn correct'
     }
     
-    if (selectedAnswer === index && !currentQuestion.variants[index].isCorrect) {
+    if (selectedAnswer === index && !currentQuestion.shuffledVariants[index].isCorrect) {
       return 'variant-btn incorrect'
     }
     
@@ -241,7 +252,7 @@ function App() {
           <h2 className="question-text">{currentQuestion.question}</h2>
           
           <div className="variants-container">
-            {currentQuestion.variants.map((variant, index) => (
+            {currentQuestion.shuffledVariants.map((variant, index) => (
               <button
                 key={index}
                 className={getButtonClass(index)}
