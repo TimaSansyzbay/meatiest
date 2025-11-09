@@ -13,9 +13,12 @@ function parseQuizFile(content) {
   const questions = [];
   let currentQuestion = null;
   let currentVariants = [];
+  let collectingQuestion = false;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+    // Clean control characters like form feed and trim whitespace
+    const rawLine = lines[i].replace(/\f/g, '');
+    const line = rawLine.trim();
 
     if (line.startsWith('<question>') || line.startsWith('<question2>')) {
       // Save previous question if exists
@@ -27,8 +30,9 @@ function parseQuizFile(content) {
       }
 
       // Start new question
-      currentQuestion = line.replace(/<question2?>/, '').trim();
+      currentQuestion = line.replace(/^<(question2?)>\s*/, '').trim();
       currentVariants = [];
+      collectingQuestion = true;
     } else if (line.startsWith('<variant>')) {
       const variantText = line.replace('<variant>', '').trim();
       const isCorrect = variantText.endsWith('+');
@@ -38,6 +42,13 @@ function parseQuizFile(content) {
         text,
         isCorrect
       });
+      // Once the first variant appears, stop collecting question continuation
+      collectingQuestion = false;
+    } else if (collectingQuestion && currentQuestion !== null && currentVariants.length === 0) {
+      // Support multi-line question statements: append any non-tag lines
+      if (line.length > 0) {
+        currentQuestion = `${currentQuestion} ${line}`.trim();
+      }
     }
   }
 
